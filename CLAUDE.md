@@ -46,6 +46,15 @@ All middleware in this library follow this signature. Middleware can be composed
   - Supports three environments: Local, Test, Production
   - All configuration parsing includes automatic validation; returns errors for invalid config allowing callers to decide how to handle failures
 
+- `server/` - HTTP server creation and lifecycle management
+  - `doc.go` - Package documentation with usage examples
+  - `server.go` - `NewServerWithConfig()` creates http.Server instances configured from environment variables via config.ServerConfig
+  - `run.go` - `Run()` function providing complete server lifecycle management with graceful shutdown
+  - Integrates with config package for environment-based configuration (port, timeouts)
+  - Handles interrupt signals (SIGINT) for graceful shutdown with 10-second timeout
+  - Logs server lifecycle events using structured logging (slog)
+  - Safe for concurrent use
+
 ## Development Commands
 
 ### Building and Testing
