@@ -44,7 +44,7 @@ All middleware in this library follow this signature. Middleware can be composed
   - `serverConfig.go` - `ServerConfig` implementation for HTTP server settings (port, timeouts, environment) and `ParseConfig[C Validator]()` generic function for parsing and validating any config type from environment variables
   - Uses `github.com/caarlos0/env/v11` for environment variable parsing
   - Supports three environments: Local, Test, Production
-  - All configuration parsing includes automatic validation with fatal errors on invalid config
+  - All configuration parsing includes automatic validation; returns errors for invalid config allowing callers to decide how to handle failures
 
 ## Development Commands
 
@@ -107,7 +107,7 @@ Configuration structs should:
 - Implement the `config.Validator` interface
 - Use struct tags for environment variable mapping: `env:"VAR_NAME" envDefault:"default_value"`
 - Be parsed using the generic `config.ParseConfig[T]()` function which handles parsing and validation
-- Fatal on invalid configuration to prevent running with bad settings
+- Handle errors returned by `ParseConfig()` appropriately (e.g., log.Fatal, fallback config, retry)
 
 Example:
 ```go
@@ -122,8 +122,18 @@ func (c ServerConfig) Validate() error {
     return nil
 }
 
-// Usage
-cfg := config.ParseConfig[ServerConfig]()
+// Usage - fail-fast approach
+cfg, err := config.ParseConfig[ServerConfig]()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Alternative - graceful error handling
+cfg, err := config.ParseConfig[ServerConfig]()
+if err != nil {
+    log.Printf("Config error: %v, using defaults", err)
+    cfg = ServerConfig{Port: 8080} // fallback
+}
 ```
 
 ### Logging

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -62,21 +61,24 @@ func (c ServerConfig) Validate() error {
 
 // ParseConfig parses environment variables into a configuration struct of type C
 // and validates the result. The type parameter C must implement the Validator interface.
-// If parsing or validation fails, the function calls log.Fatal and terminates the program.
-// This ensures that the application only runs with valid configuration.
+// Returns an error if parsing or validation fails, allowing the caller to decide how to handle it.
 //
 // Example:
 //
-//	cfg := ParseConfig[ServerConfig]()
-func ParseConfig[C Validator]() C {
+//	cfg, err := ParseConfig[ServerConfig]()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+func ParseConfig[C Validator]() (C, error) {
+	var zero C
 	cfg, err := env.ParseAs[C]()
 	if err != nil {
-		log.Fatal(err)
+		return zero, fmt.Errorf("failed to parse config from environment: %w", err)
 	}
 
 	if err := cfg.Validate(); err != nil {
-		log.Fatal(err)
+		return zero, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	return cfg
+	return cfg, nil
 }
