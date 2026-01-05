@@ -1,0 +1,13 @@
+version: 2
+
+# Skip building binaries entirely
+builds:
+  - skip: true
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
