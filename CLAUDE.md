@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Maintaining This File
 
-When working on new modules or components that are not yet documented in this file, update the Architecture section to include details about the new modules. This ensures future Claude Code sessions have accurate information about the codebase structure.
+**IMPORTANT**: After creating, modifying, or reviewing any new modules or packages in this codebase, you MUST update the "Package Structure" section under Architecture to document them. This is a required step, not optional.
+
+Actions that require updating this file:
+- Creating a new package or module
+- Adding significant functionality to an existing package
+- Reviewing or documenting a module that isn't listed in the Package Structure section
+
+Failing to update this file means future Claude Code sessions will lack critical context about the codebase structure.
 
 ## Project Overview
 
@@ -30,6 +37,14 @@ All middleware in this library follow this signature. Middleware can be composed
   - `maxBytesReader.go` - Request body size limiting (default 1MB)
   - `setContentType.go` - Response Content-Type header setting
   - `middleware_example_test.go` - Example functions demonstrating middleware usage following Go's standard example conventions
+
+- `config/` - Environment-based configuration management with validation
+  - `doc.go` - Package documentation
+  - `validator.go` - `Validator` interface for configuration types that support validation
+  - `serverConfig.go` - `ServerConfig` implementation for HTTP server settings (port, timeouts, environment) and `ParseConfig[C Validator]()` generic function for parsing and validating any config type from environment variables
+  - Uses `github.com/caarlos0/env/v11` for environment variable parsing
+  - Supports three environments: Local, Test, Production
+  - All configuration parsing includes automatic validation with fatal errors on invalid config
 
 ## Development Commands
 
@@ -85,6 +100,31 @@ func NewSetContentType(contentType string) Middleware
 ```
 
 This allows parameterized middleware while maintaining the standard `Middleware` signature for composition.
+
+### Configuration Pattern
+
+Configuration structs should:
+- Implement the `config.Validator` interface
+- Use struct tags for environment variable mapping: `env:"VAR_NAME" envDefault:"default_value"`
+- Be parsed using the generic `config.ParseConfig[T]()` function which handles parsing and validation
+- Fatal on invalid configuration to prevent running with bad settings
+
+Example:
+```go
+type ServerConfig struct {
+    Port int `env:"PORT" envDefault:"8080"`
+}
+
+func (c ServerConfig) Validate() error {
+    if c.Port < 1 || c.Port > 65535 {
+        return fmt.Errorf("invalid port: %d", c.Port)
+    }
+    return nil
+}
+
+// Usage
+cfg := config.ParseConfig[ServerConfig]()
+```
 
 ### Logging
 

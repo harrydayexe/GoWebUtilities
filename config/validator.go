@@ -1,7 +1,10 @@
 package config
 
-// Validator is an interface for configs that can be validated
+// Validator is an interface for configuration types that support validation.
+// Configuration structs should implement this interface to enable validation
+// of their fields after parsing from environment variables.
 type Validator interface {
-	// Validate returns an error if the config is invalid, nil otherwise.
+	// Validate checks the configuration for invalid values or inconsistencies.
+	// It returns an error describing what is invalid, or nil if the configuration is valid.
 	Validate() error
 }
