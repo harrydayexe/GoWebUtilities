@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/harrydayexe/GoWebUtilities/config"
+	"github.com/harrydayexe/GoWebUtilities/logging"
 )
 
 // NewServerWithConfig creates a new http.Server configured from environment variables.
@@ -30,6 +31,8 @@ func NewServerWithConfig(handler http.Handler) (*http.Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config from environment: %w", err)
 	}
+
+	logging.SetDefaultLogger(cfg)
 
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
