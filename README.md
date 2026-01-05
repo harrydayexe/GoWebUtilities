@@ -4,7 +4,7 @@ A Go library providing reusable utilities for building web applications.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/harrydayexe/GoWebUtilities.svg)](https://pkg.go.dev/github.com/harrydayexe/GoWebUtilities)
 [![Go Report Card](https://goreportcard.com/badge/github.com/harrydayexe/GoWebUtilities)](https://goreportcard.com/report/github.com/harrydayexe/GoWebUtilities)
-![Build Status](https://github.com/harrydayexe/GoWebUtilities/actions/workflows/test.yml/badge.svg)
+[![Test](https://github.com/harrydayexe/GoWebUtilities/actions/workflows/test.yml/badge.svg?event=push)](https://github.com/harrydayexe/GoWebUtilities/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
