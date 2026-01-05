@@ -29,6 +29,7 @@ All middleware in this library follow this signature. Middleware can be composed
   - `logging.go` - Request logging with slog integration, uses `wrappedWriter` to capture status codes
   - `maxBytesReader.go` - Request body size limiting (default 1MB)
   - `setContentType.go` - Response Content-Type header setting
+  - `middleware_example_test.go` - Example functions demonstrating middleware usage following Go's standard example conventions
 
 ## Development Commands
 
@@ -47,6 +48,9 @@ go tool cover -html=coverage.out
 
 # Run tests for specific package
 go test ./middleware
+
+# Run examples
+go test -v ./middleware -run Example
 
 # Verify module dependencies
 go mod verify
@@ -88,6 +92,22 @@ This allows parameterized middleware while maintaining the standard `Middleware`
 - Request start logged at DEBUG level
 - Request completion logged at INFO level with method, path, status, and duration
 
+### Examples and Testing
+
+The middleware package includes idiomatic Go examples in `middleware_example_test.go`:
+
+- **Package**: `middleware_test` (black-box testing from external perspective)
+- **Example Functions**: Follow Go's `Example*` naming convention
+- **Testable Examples**: Use `// Output:` comments where output is deterministic
+- **Coverage**: Examples demonstrate all exported middleware functions:
+  - `ExampleNewSetContentTypeJSON()` - Basic middleware usage
+  - `ExampleNewMaxBytesReader()` - Request size limiting
+  - `ExampleNewLoggingMiddleware()` - Structured logging integration
+  - `ExampleCreateStack()` - Middleware composition
+  - `ExampleCreateStack_complete()` - Full HTTP server setup
+  - `ExampleCreateStack_jsonAPI()` - Realistic JSON API scenario
+
+Examples serve as both documentation (visible in `godoc` and `pkg.go.dev`) and executable tests.
 
 ### Standard Library
 
