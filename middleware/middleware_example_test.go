@@ -3,6 +3,7 @@ package middleware_test
 import (
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -63,7 +64,10 @@ func ExampleNewSetContentTypeJSON() {
 	defer server.Close()
 
 	// Make a request
-	resp, _ := http.Get(server.URL)
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer resp.Body.Close()
 
 	fmt.Printf("Content-Type: %s\n", resp.Header.Get("Content-Type"))
@@ -95,7 +99,10 @@ func ExampleNewMaxBytesReader() {
 
 	// Test with small payload (should succeed)
 	smallPayload := strings.NewReader("small data")
-	resp, _ := http.Post(server.URL, "text/plain", smallPayload)
+	resp, err := http.Post(server.URL, "text/plain", smallPayload)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 
@@ -128,7 +135,10 @@ func ExampleNewLoggingMiddleware() {
 	defer server.Close()
 
 	// Make a request (logging happens automatically)
-	resp, _ := http.Get(server.URL + "/api/test")
+	resp, err := http.Get(server.URL + "/api/test")
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer resp.Body.Close()
 
 	fmt.Printf("Request logged with status: %d\n", resp.StatusCode)
@@ -158,7 +168,10 @@ func ExampleCreateStack() {
 	defer server.Close()
 
 	// Make a request
-	resp, _ := http.Get(server.URL)
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer resp.Body.Close()
 
 	fmt.Printf("Content-Type: %s\n", resp.Header.Get("Content-Type"))
@@ -194,7 +207,10 @@ func ExampleCreateStack_complete() {
 	defer server.Close()
 
 	// Make a request
-	resp, _ := http.Get(server.URL + "/api/test")
+	resp, err := http.Get(server.URL + "/api/test")
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer resp.Body.Close()
 
 	fmt.Printf("Status: %d\n", resp.StatusCode)
