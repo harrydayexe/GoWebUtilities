@@ -67,18 +67,6 @@ go doc github.com/harrydayexe/GoWebUtilities/middleware.NewLoggingMiddleware
 
 Full documentation is also available on [pkg.go.dev](https://pkg.go.dev/github.com/harrydayexe/GoWebUtilities).
 
-## Examples
-
-View and run examples:
-
-```bash
-# Run all examples
-go test -v ./middleware -run Example
-
-# Run specific example
-go test -v ./middleware -run ExampleCreateStack
-```
-
 ## Testing
 
 ```bash
