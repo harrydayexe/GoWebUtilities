@@ -46,6 +46,15 @@ All middleware in this library follow this signature. Middleware can be composed
   - Supports three environments: Local, Test, Production
   - All configuration parsing includes automatic validation; returns errors for invalid config allowing callers to decide how to handle failures
 
+- `logging/` - Centralized logger configuration for structured logging
+  - `doc.go` - Package documentation
+  - `logger.go` - `SetDefaultLogger()` configures global slog logger based on environment
+  - Integrates with config package for environment-based setup
+  - Selects handler type (Text for Local, JSON for Test/Production)
+  - Configures log level (DEBUG if verbose, INFO otherwise)
+  - Sets global default via slog.SetDefault()
+  - NOT safe for concurrent use - call once during initialization
+
 - `server/` - HTTP server creation and lifecycle management
   - `doc.go` - Package documentation with usage examples
   - `server.go` - `NewServerWithConfig()` creates http.Server instances configured from environment variables via config.ServerConfig

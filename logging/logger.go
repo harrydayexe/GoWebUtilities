@@ -7,8 +7,25 @@ import (
 	"github.com/harrydayexe/GoWebUtilities/config"
 )
 
-// SetDefaultLogger sets the default slog logger to be used in the application
-// based on the server config provided
+// SetDefaultLogger configures the default slog logger based on the provided ServerConfig.
+// It sets the global default logger used by slog.Info, slog.Debug, and other top-level
+// slog functions.
+//
+// The function configures two aspects:
+//   - Log level: DEBUG if cfg.VerboseMode is true, otherwise INFO
+//   - Handler type: Text for Local environment, JSON for Test/Production
+//
+// Log handlers write to os.Stdout. All log output includes timestamps and context fields.
+//
+// This function is NOT safe for concurrent use and modifies global state via slog.SetDefault.
+// Call it once during application initialization (e.g., in main(), before starting the server)
+// before any goroutines that use logging are spawned.
+//
+// Example:
+//
+//	cfg, _ := config.ParseConfig[config.ServerConfig]()
+//	logging.SetDefaultLogger(cfg)
+//	slog.Info("server starting", "environment", cfg.Environment)
 func SetDefaultLogger(cfg config.ServerConfig) {
 	var logger *slog.Logger
 	var handlerOptions slog.HandlerOptions
