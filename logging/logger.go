@@ -12,7 +12,7 @@ import (
 // slog functions.
 //
 // The function configures two aspects:
-//   - Log level: DEBUG if cfg.VerboseMode is true, otherwise INFO
+//   - Log level: configured by cfg.LogLevel (DEBUG, INFO, WARN, or ERROR)
 //   - Handler type: Text for Local environment, JSON for Test/Production
 //
 // Log handlers write to os.Stdout. All log output includes timestamps and context fields.
@@ -27,15 +27,9 @@ import (
 //	logging.SetDefaultLogger(cfg)
 //	slog.Info("server starting", "environment", cfg.Environment)
 func SetDefaultLogger(cfg config.ServerConfig) {
+	handlerOptions := slog.HandlerOptions{Level: cfg.LogLevel}
+
 	var logger *slog.Logger
-	var handlerOptions slog.HandlerOptions
-
-	if cfg.VerboseMode {
-		handlerOptions = slog.HandlerOptions{Level: slog.LevelDebug}
-	} else {
-		handlerOptions = slog.HandlerOptions{Level: slog.LevelInfo}
-	}
-
 	if cfg.Environment == config.Local {
 		logger = slog.New(slog.NewTextHandler(os.Stdout, &handlerOptions))
 	} else {

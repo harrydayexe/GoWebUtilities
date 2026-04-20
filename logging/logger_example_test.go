@@ -18,7 +18,7 @@ func Example() {
 	// Configure logging based on environment
 	cfg := config.ServerConfig{
 		Environment: config.Local,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 
 	logging.SetDefaultLogger(cfg)
@@ -28,11 +28,11 @@ func Example() {
 
 	fmt.Println("Logging configured for local development")
 	fmt.Println("Handler: Text format")
-	fmt.Println("Level: INFO")
+	fmt.Println("Level: WARN")
 	// Output:
 	// Logging configured for local development
 	// Handler: Text format
-	// Level: INFO
+	// Level: WARN
 }
 
 // ExampleSetDefaultLogger demonstrates typical usage of SetDefaultLogger.
@@ -40,7 +40,7 @@ func ExampleSetDefaultLogger() {
 	// Create configuration
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 		Port:        8080,
 	}
 
@@ -60,7 +60,7 @@ func ExampleSetDefaultLogger() {
 func ExampleSetDefaultLogger_local() {
 	cfg := config.ServerConfig{
 		Environment: config.Local,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 
 	logging.SetDefaultLogger(cfg)
@@ -69,12 +69,12 @@ func ExampleSetDefaultLogger_local() {
 	// Perfect for development and debugging
 	fmt.Println("Local development logging:")
 	fmt.Println("- Text format (human-readable)")
-	fmt.Println("- INFO level and above")
+	fmt.Println("- WARN level and above")
 	fmt.Println("- Output to stdout")
 	// Output:
 	// Local development logging:
 	// - Text format (human-readable)
-	// - INFO level and above
+	// - WARN level and above
 	// - Output to stdout
 }
 
@@ -82,7 +82,7 @@ func ExampleSetDefaultLogger_local() {
 func ExampleSetDefaultLogger_production() {
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 
 	logging.SetDefaultLogger(cfg)
@@ -91,32 +91,32 @@ func ExampleSetDefaultLogger_production() {
 	// Ideal for log aggregation and analysis
 	fmt.Println("Production logging:")
 	fmt.Println("- JSON format (structured)")
-	fmt.Println("- INFO level and above")
+	fmt.Println("- WARN level and above")
 	fmt.Println("- Ready for log aggregation systems")
 	// Output:
 	// Production logging:
 	// - JSON format (structured)
-	// - INFO level and above
+	// - WARN level and above
 	// - Ready for log aggregation systems
 }
 
-// ExampleSetDefaultLogger_verbose demonstrates verbose debug logging.
-func ExampleSetDefaultLogger_verbose() {
+// ExampleSetDefaultLogger_debug demonstrates debug logging.
+func ExampleSetDefaultLogger_debug() {
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: true,
+		LogLevel:    slog.LevelDebug,
 	}
 
 	logging.SetDefaultLogger(cfg)
 
-	// Verbose mode enables DEBUG level logging
+	// DEBUG level enables all log messages
 	// Useful for troubleshooting and detailed diagnostics
-	fmt.Println("Verbose logging enabled:")
+	fmt.Println("Debug logging enabled:")
 	fmt.Println("- DEBUG level and above")
 	fmt.Println("- Includes detailed diagnostic information")
 	fmt.Println("- Use for troubleshooting")
 	// Output:
-	// Verbose logging enabled:
+	// Debug logging enabled:
 	// - DEBUG level and above
 	// - Includes detailed diagnostic information
 	// - Use for troubleshooting
@@ -127,7 +127,7 @@ func ExampleSetDefaultLogger_withServer() {
 	// Parse configuration from environment
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 		Port:        8080,
 	}
 
@@ -164,7 +164,7 @@ func ExampleSetDefaultLogger_withMiddleware() {
 	// Configure application-level logging
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 	logging.SetDefaultLogger(cfg)
 
@@ -206,7 +206,7 @@ func ExampleSetDefaultLogger_fullApplication() {
 	// Step 1: Parse configuration
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 		Port:        8080,
 	}
 
@@ -220,7 +220,7 @@ func ExampleSetDefaultLogger_fullApplication() {
 	slog.Info("application starting",
 		"environment", cfg.Environment,
 		"port", cfg.Port,
-		"verbose", cfg.VerboseMode,
+		"log_level", cfg.LogLevel,
 	)
 
 	// Step 4: Create HTTP handlers
@@ -252,7 +252,7 @@ func ExampleSetDefaultLogger_errorHandling() {
 	// Parse config with error handling
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 
 	// Configure logger
@@ -283,7 +283,7 @@ func someOperation() error {
 func ExampleSetDefaultLogger_contextualLogging() {
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 	logging.SetDefaultLogger(cfg)
 

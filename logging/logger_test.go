@@ -16,16 +16,23 @@ func saveDefaultLogger() *slog.Logger {
 	return slog.Default()
 }
 
-// getLogLevel returns the configured log level by checking if DEBUG is enabled
+// getLogLevel returns the configured log level by checking which levels are enabled
 func getLogLevel(logger *slog.Logger) slog.Level {
 	handler := logger.Handler()
-	if handler.Enabled(context.Background(), slog.LevelDebug) {
+	ctx := context.Background()
+	switch {
+	case handler.Enabled(ctx, slog.LevelDebug):
 		return slog.LevelDebug
+	case handler.Enabled(ctx, slog.LevelInfo):
+		return slog.LevelInfo
+	case handler.Enabled(ctx, slog.LevelWarn):
+		return slog.LevelWarn
+	default:
+		return slog.LevelError
 	}
-	return slog.LevelInfo
 }
 
-// TestSetDefaultLogger_AllEnvironments tests all combinations of environment and verbose mode
+// TestSetDefaultLogger_AllEnvironments tests all combinations of environment and log level
 func TestSetDefaultLogger_AllEnvironments(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -34,58 +41,58 @@ func TestSetDefaultLogger_AllEnvironments(t *testing.T) {
 		wantLogLevel    slog.Level
 	}{
 		{
-			name: "local_non_verbose",
+			name: "local_debug",
 			cfg: config.ServerConfig{
 				Environment: config.Local,
-				VerboseMode: false,
-			},
-			wantHandlerType: "text",
-			wantLogLevel:    slog.LevelInfo,
-		},
-		{
-			name: "local_verbose",
-			cfg: config.ServerConfig{
-				Environment: config.Local,
-				VerboseMode: true,
+				LogLevel:    slog.LevelDebug,
 			},
 			wantHandlerType: "text",
 			wantLogLevel:    slog.LevelDebug,
 		},
 		{
-			name: "test_non_verbose",
+			name: "local_warn",
+			cfg: config.ServerConfig{
+				Environment: config.Local,
+				LogLevel:    slog.LevelWarn,
+			},
+			wantHandlerType: "text",
+			wantLogLevel:    slog.LevelWarn,
+		},
+		{
+			name: "test_info",
 			cfg: config.ServerConfig{
 				Environment: config.Test,
-				VerboseMode: false,
+				LogLevel:    slog.LevelInfo,
 			},
 			wantHandlerType: "json",
 			wantLogLevel:    slog.LevelInfo,
 		},
 		{
-			name: "test_verbose",
+			name: "test_warn",
 			cfg: config.ServerConfig{
 				Environment: config.Test,
-				VerboseMode: true,
+				LogLevel:    slog.LevelWarn,
 			},
 			wantHandlerType: "json",
-			wantLogLevel:    slog.LevelDebug,
+			wantLogLevel:    slog.LevelWarn,
 		},
 		{
-			name: "production_non_verbose",
+			name: "production_warn",
 			cfg: config.ServerConfig{
 				Environment: config.Production,
-				VerboseMode: false,
+				LogLevel:    slog.LevelWarn,
 			},
 			wantHandlerType: "json",
-			wantLogLevel:    slog.LevelInfo,
+			wantLogLevel:    slog.LevelWarn,
 		},
 		{
-			name: "production_verbose",
+			name: "production_error",
 			cfg: config.ServerConfig{
 				Environment: config.Production,
-				VerboseMode: true,
+				LogLevel:    slog.LevelError,
 			},
 			wantHandlerType: "json",
-			wantLogLevel:    slog.LevelDebug,
+			wantLogLevel:    slog.LevelError,
 		},
 	}
 
@@ -104,14 +111,24 @@ func TestSetDefaultLogger_AllEnvironments(t *testing.T) {
 				t.Error("SetDefaultLogger did not change the default logger")
 			}
 
-			// Verify log level by checking if DEBUG is enabled
+			// Verify log level
 			handler := logger.Handler()
 			ctx := context.Background()
-			debugEnabled := handler.Enabled(ctx, slog.LevelDebug)
-			wantDebugEnabled := (tt.wantLogLevel == slog.LevelDebug)
 
-			if debugEnabled != wantDebugEnabled {
-				t.Errorf("DEBUG enabled = %v, want %v", debugEnabled, wantDebugEnabled)
+			gotLevel := getLogLevel(logger)
+			if gotLevel != tt.wantLogLevel {
+				t.Errorf("log level = %v, want %v", gotLevel, tt.wantLogLevel)
+			}
+
+			// Verify levels below wantLogLevel are disabled
+			if tt.wantLogLevel > slog.LevelDebug && handler.Enabled(ctx, slog.LevelDebug) {
+				t.Errorf("DEBUG should be disabled for level %v", tt.wantLogLevel)
+			}
+			if tt.wantLogLevel > slog.LevelInfo && handler.Enabled(ctx, slog.LevelInfo) {
+				t.Errorf("INFO should be disabled for level %v", tt.wantLogLevel)
+			}
+			if tt.wantLogLevel > slog.LevelWarn && handler.Enabled(ctx, slog.LevelWarn) {
+				t.Errorf("WARN should be disabled for level %v", tt.wantLogLevel)
 			}
 		})
 	}
@@ -149,7 +166,7 @@ func TestSetDefaultLogger_HandlerSelection(t *testing.T) {
 
 			cfg := config.ServerConfig{
 				Environment: tt.environment,
-				VerboseMode: false,
+				LogLevel:    slog.LevelWarn,
 			}
 
 			SetDefaultLogger(cfg)
@@ -161,39 +178,61 @@ func TestSetDefaultLogger_HandlerSelection(t *testing.T) {
 			// Create a new logger with buffer to test output format
 			var testLogger *slog.Logger
 			if tt.wantJSON {
-				testLogger = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+				testLogger = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 			} else {
-				testLogger = slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+				testLogger = slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 			}
 
 			// Verify handler enabled state matches
 			ctx := context.Background()
-			if logger.Handler().Enabled(ctx, slog.LevelInfo) != testLogger.Handler().Enabled(ctx, slog.LevelInfo) {
+			if logger.Handler().Enabled(ctx, slog.LevelWarn) != testLogger.Handler().Enabled(ctx, slog.LevelWarn) {
 				t.Error("handler enabled state mismatch")
 			}
 		})
 	}
 }
 
-// TestSetDefaultLogger_LogLevelConfiguration verifies log level based on verbose mode
+// TestSetDefaultLogger_LogLevelConfiguration verifies log level configuration for all levels
 func TestSetDefaultLogger_LogLevelConfiguration(t *testing.T) {
 	tests := []struct {
-		name        string
-		verboseMode bool
-		wantDebug   bool
-		wantInfo    bool
+		name       string
+		logLevel   slog.Level
+		wantDebug  bool
+		wantInfo   bool
+		wantWarn   bool
+		wantError  bool
 	}{
 		{
-			name:        "verbose_enables_debug",
-			verboseMode: true,
-			wantDebug:   true,
-			wantInfo:    true,
+			name:      "debug_enables_all",
+			logLevel:  slog.LevelDebug,
+			wantDebug: true,
+			wantInfo:  true,
+			wantWarn:  true,
+			wantError: true,
 		},
 		{
-			name:        "non_verbose_filters_debug",
-			verboseMode: false,
-			wantDebug:   false,
-			wantInfo:    true,
+			name:      "info_filters_debug",
+			logLevel:  slog.LevelInfo,
+			wantDebug: false,
+			wantInfo:  true,
+			wantWarn:  true,
+			wantError: true,
+		},
+		{
+			name:      "warn_filters_debug_and_info",
+			logLevel:  slog.LevelWarn,
+			wantDebug: false,
+			wantInfo:  false,
+			wantWarn:  true,
+			wantError: true,
+		},
+		{
+			name:      "error_filters_debug_info_warn",
+			logLevel:  slog.LevelError,
+			wantDebug: false,
+			wantInfo:  false,
+			wantWarn:  false,
+			wantError: true,
 		},
 	}
 
@@ -205,7 +244,7 @@ func TestSetDefaultLogger_LogLevelConfiguration(t *testing.T) {
 
 			cfg := config.ServerConfig{
 				Environment: config.Test,
-				VerboseMode: tt.verboseMode,
+				LogLevel:    tt.logLevel,
 			}
 
 			SetDefaultLogger(cfg)
@@ -214,16 +253,17 @@ func TestSetDefaultLogger_LogLevelConfiguration(t *testing.T) {
 			handler := logger.Handler()
 			ctx := context.Background()
 
-			// Check DEBUG level
-			gotDebug := handler.Enabled(ctx, slog.LevelDebug)
-			if gotDebug != tt.wantDebug {
-				t.Errorf("DEBUG enabled = %v, want %v", gotDebug, tt.wantDebug)
+			if got := handler.Enabled(ctx, slog.LevelDebug); got != tt.wantDebug {
+				t.Errorf("DEBUG enabled = %v, want %v", got, tt.wantDebug)
 			}
-
-			// Check INFO level
-			gotInfo := handler.Enabled(ctx, slog.LevelInfo)
-			if gotInfo != tt.wantInfo {
-				t.Errorf("INFO enabled = %v, want %v", gotInfo, tt.wantInfo)
+			if got := handler.Enabled(ctx, slog.LevelInfo); got != tt.wantInfo {
+				t.Errorf("INFO enabled = %v, want %v", got, tt.wantInfo)
+			}
+			if got := handler.Enabled(ctx, slog.LevelWarn); got != tt.wantWarn {
+				t.Errorf("WARN enabled = %v, want %v", got, tt.wantWarn)
+			}
+			if got := handler.Enabled(ctx, slog.LevelError); got != tt.wantError {
+				t.Errorf("ERROR enabled = %v, want %v", got, tt.wantError)
 			}
 		})
 	}
@@ -236,22 +276,22 @@ func TestSetDefaultLogger_MultipleInvocations(t *testing.T) {
 	original := saveDefaultLogger()
 	defer slog.SetDefault(original)
 
-	// First call: Local, non-verbose
+	// First call: Local, warn
 	cfg1 := config.ServerConfig{
 		Environment: config.Local,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 	SetDefaultLogger(cfg1)
 	logger1 := slog.Default()
 	level1 := getLogLevel(logger1)
-	if level1 != slog.LevelInfo {
-		t.Errorf("first call: log level = %v, want %v", level1, slog.LevelInfo)
+	if level1 != slog.LevelWarn {
+		t.Errorf("first call: log level = %v, want %v", level1, slog.LevelWarn)
 	}
 
-	// Second call: Production, verbose
+	// Second call: Production, debug
 	cfg2 := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: true,
+		LogLevel:    slog.LevelDebug,
 	}
 	SetDefaultLogger(cfg2)
 	logger2 := slog.Default()
@@ -265,16 +305,16 @@ func TestSetDefaultLogger_MultipleInvocations(t *testing.T) {
 		t.Error("logger was not replaced on second call")
 	}
 
-	// Third call: back to INFO level
+	// Third call: back to warn level
 	cfg3 := config.ServerConfig{
 		Environment: config.Test,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 	SetDefaultLogger(cfg3)
 	logger3 := slog.Default()
 	level3 := getLogLevel(logger3)
-	if level3 != slog.LevelInfo {
-		t.Errorf("third call: log level = %v, want %v", level3, slog.LevelInfo)
+	if level3 != slog.LevelWarn {
+		t.Errorf("third call: log level = %v, want %v", level3, slog.LevelWarn)
 	}
 }
 
@@ -286,7 +326,7 @@ func TestSetDefaultLogger_Integration(t *testing.T) {
 
 	cfg := config.ServerConfig{
 		Environment: config.Production,
-		VerboseMode: true,
+		LogLevel:    slog.LevelDebug,
 	}
 
 	// Verify default changed
@@ -304,7 +344,7 @@ func TestSetDefaultLogger_Integration(t *testing.T) {
 
 	// Should enable DEBUG
 	if !handler.Enabled(ctx, slog.LevelDebug) {
-		t.Error("DEBUG not enabled for verbose mode")
+		t.Error("DEBUG not enabled for LevelDebug")
 	}
 
 	// Should enable INFO
@@ -323,7 +363,7 @@ func TestSetDefaultLogger_ConcurrentCalls(t *testing.T) {
 
 	cfg := config.ServerConfig{
 		Environment: config.Test,
-		VerboseMode: false,
+		LogLevel:    slog.LevelWarn,
 	}
 
 	// Track panics
@@ -366,64 +406,70 @@ func TestSetDefaultLogger_ActualLogging(t *testing.T) {
 	defer slog.SetDefault(original)
 
 	tests := []struct {
-		name           string
-		cfg            config.ServerConfig
+		name          string
+		logLevel      slog.Level
 		shouldLogDebug bool
+		shouldLogInfo  bool
+		shouldLogWarn  bool
 	}{
 		{
-			name: "verbose_logs_debug",
-			cfg: config.ServerConfig{
-				Environment: config.Test,
-				VerboseMode: true,
-			},
+			name:          "debug_logs_all",
+			logLevel:      slog.LevelDebug,
 			shouldLogDebug: true,
+			shouldLogInfo:  true,
+			shouldLogWarn:  true,
 		},
 		{
-			name: "non_verbose_filters_debug",
-			cfg: config.ServerConfig{
-				Environment: config.Test,
-				VerboseMode: false,
-			},
+			name:          "info_filters_debug",
+			logLevel:      slog.LevelInfo,
 			shouldLogDebug: false,
+			shouldLogInfo:  true,
+			shouldLogWarn:  true,
+		},
+		{
+			name:          "warn_filters_debug_and_info",
+			logLevel:      slog.LevelWarn,
+			shouldLogDebug: false,
+			shouldLogInfo:  false,
+			shouldLogWarn:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Configure logger with buffer
 			var buf bytes.Buffer
-			var testLogger *slog.Logger
-
-			opts := &slog.HandlerOptions{
-				Level: func() slog.Level {
-					if tt.cfg.VerboseMode {
-						return slog.LevelDebug
-					}
-					return slog.LevelInfo
-				}(),
-			}
-
-			testLogger = slog.New(slog.NewJSONHandler(&buf, opts))
+			opts := &slog.HandlerOptions{Level: tt.logLevel}
+			testLogger := slog.New(slog.NewJSONHandler(&buf, opts))
 			slog.SetDefault(testLogger)
 
-			// Log messages
 			slog.Debug("debug message")
 			slog.Info("info message")
+			slog.Warn("warn message")
 
 			output := buf.String()
 
-			// Verify INFO always appears
-			if !strings.Contains(output, "info message") {
-				t.Error("INFO message not in output")
-			}
-
-			// Verify DEBUG based on verbose mode
 			hasDebug := strings.Contains(output, "debug message")
 			if tt.shouldLogDebug && !hasDebug {
 				t.Error("DEBUG message should be in output but is not")
 			}
 			if !tt.shouldLogDebug && hasDebug {
 				t.Error("DEBUG message should be filtered but appears in output")
+			}
+
+			hasInfo := strings.Contains(output, "info message")
+			if tt.shouldLogInfo && !hasInfo {
+				t.Error("INFO message should be in output but is not")
+			}
+			if !tt.shouldLogInfo && hasInfo {
+				t.Error("INFO message should be filtered but appears in output")
+			}
+
+			hasWarn := strings.Contains(output, "warn message")
+			if tt.shouldLogWarn && !hasWarn {
+				t.Error("WARN message should be in output but is not")
+			}
+			if !tt.shouldLogWarn && hasWarn {
+				t.Error("WARN message should be filtered but appears in output")
 			}
 		})
 	}

@@ -3,6 +3,7 @@ package config_test
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/harrydayexe/GoWebUtilities/config"
@@ -13,7 +14,7 @@ import (
 func ExampleServerConfig() {
 	cfg := config.ServerConfig{
 		Environment:  config.Local,
-		VerboseMode:  false,
+		LogLevel:     slog.LevelWarn,
 		Port:         8080,
 		ReadTimeout:  15,
 		WriteTimeout: 15,
@@ -26,12 +27,12 @@ func ExampleServerConfig() {
 
 	fmt.Printf("Environment: %s\n", cfg.Environment)
 	fmt.Printf("Port: %d\n", cfg.Port)
-	fmt.Printf("Verbose: %t\n", cfg.VerboseMode)
+	fmt.Printf("Log Level: %s\n", cfg.LogLevel)
 
 	// Output:
 	// Environment: local
 	// Port: 8080
-	// Verbose: false
+	// Log Level: WARN
 }
 
 // ExampleServerConfig_Validate demonstrates validation of different
@@ -86,7 +87,7 @@ func ExampleParseConfig() {
 	// Set environment variables for the example
 	os.Setenv("ENVIRONMENT", "production")
 	os.Setenv("PORT", "3000")
-	os.Setenv("VERBOSE", "true")
+	os.Setenv("LOG_LEVEL", "debug")
 
 	cfg, err := config.ParseConfig[config.ServerConfig]()
 	if err != nil {
@@ -95,12 +96,12 @@ func ExampleParseConfig() {
 
 	fmt.Printf("Environment: %s\n", cfg.Environment)
 	fmt.Printf("Port: %d\n", cfg.Port)
-	fmt.Printf("Verbose: %t\n", cfg.VerboseMode)
+	fmt.Printf("Log Level: %s\n", cfg.LogLevel)
 
 	// Output:
 	// Environment: production
 	// Port: 3000
-	// Verbose: true
+	// Log Level: DEBUG
 }
 
 // ExampleParseConfig_errorHandling demonstrates custom error handling
