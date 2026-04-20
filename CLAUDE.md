@@ -51,7 +51,7 @@ All middleware in this library follow this signature. Middleware can be composed
   - `logger.go` - `SetDefaultLogger()` configures global slog logger based on environment
   - Integrates with config package for environment-based setup
   - Selects handler type (Text for Local, JSON for Test/Production)
-  - Configures log level (DEBUG if verbose, INFO otherwise)
+  - Configures log level from `LOG_LEVEL` env var via `config.ServerConfig.LogLevel` (type `slog.Level`; accepts DEBUG/INFO/WARN/ERROR case-insensitively; defaults to WARN)
   - Sets global default via slog.SetDefault()
   - NOT safe for concurrent use - call once during initialization
 

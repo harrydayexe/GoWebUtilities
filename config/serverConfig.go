@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -30,9 +31,9 @@ type ServerConfig struct {
 	// Environment specifies the runtime environment (local, test, or production).
 	// Defaults to "local" if ENVIRONMENT is not set.
 	Environment Environment `env:"ENVIRONMENT" envDefault:"local"`
-	// VerboseMode enables verbose logging when true.
-	// Defaults to false if VERBOSE is not set.
-	VerboseMode bool `env:"VERBOSE" envDefault:"false"`
+	// LogLevel specifies the minimum log level (DEBUG, INFO, WARN, or ERROR).
+	// Accepts case-insensitive values. Defaults to WARN if LOG_LEVEL is not set.
+	LogLevel slog.Level `env:"LOG_LEVEL" envDefault:"WARN"`
 	// Port is the HTTP server port number.
 	// Defaults to 8080 if PORT is not set.
 	Port int `env:"PORT" envDefault:"8080"`

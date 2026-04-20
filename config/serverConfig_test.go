@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"testing"
 )
 
@@ -98,7 +99,7 @@ func TestServerConfig_Validate(t *testing.T) {
 			name: "Valid config with all fields populated",
 			config: ServerConfig{
 				Environment:  Production,
-				VerboseMode:  true,
+				LogLevel:     slog.LevelDebug,
 				Port:         8080,
 				ReadTimeout:  30,
 				WriteTimeout: 30,
@@ -124,7 +125,7 @@ func TestServerConfig_Validate(t *testing.T) {
 
 func TestParseConfig_ServerConfig_Defaults(t *testing.T) {
 	// Clear all relevant environment variables to test defaults
-	envVars := []string{"ENVIRONMENT", "VERBOSE", "PORT", "READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT"}
+	envVars := []string{"ENVIRONMENT", "LOG_LEVEL", "PORT", "READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT"}
 	for _, v := range envVars {
 		t.Setenv(v, "")
 	}
@@ -138,8 +139,8 @@ func TestParseConfig_ServerConfig_Defaults(t *testing.T) {
 	if cfg.Environment != Local {
 		t.Errorf("Default Environment = %v, want %v", cfg.Environment, Local)
 	}
-	if cfg.VerboseMode != false {
-		t.Errorf("Default VerboseMode = %v, want %v", cfg.VerboseMode, false)
+	if cfg.LogLevel != slog.LevelWarn {
+		t.Errorf("Default LogLevel = %v, want %v", cfg.LogLevel, slog.LevelWarn)
 	}
 	if cfg.Port != 8080 {
 		t.Errorf("Default Port = %v, want %v", cfg.Port, 8080)
@@ -158,7 +159,7 @@ func TestParseConfig_ServerConfig_Defaults(t *testing.T) {
 func TestParseConfig_ServerConfig_CustomValues(t *testing.T) {
 	// Set custom environment variables
 	t.Setenv("ENVIRONMENT", "production")
-	t.Setenv("VERBOSE", "true")
+	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("PORT", "3000")
 	t.Setenv("READ_TIMEOUT", "30")
 	t.Setenv("WRITE_TIMEOUT", "30")
@@ -173,8 +174,8 @@ func TestParseConfig_ServerConfig_CustomValues(t *testing.T) {
 	if cfg.Environment != Production {
 		t.Errorf("Environment = %v, want %v", cfg.Environment, Production)
 	}
-	if cfg.VerboseMode != true {
-		t.Errorf("VerboseMode = %v, want %v", cfg.VerboseMode, true)
+	if cfg.LogLevel != slog.LevelDebug {
+		t.Errorf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelDebug)
 	}
 	if cfg.Port != 3000 {
 		t.Errorf("Port = %v, want %v", cfg.Port, 3000)

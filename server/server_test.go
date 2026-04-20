@@ -19,7 +19,7 @@ import (
 // clearServerEnvVars clears all server configuration environment variables
 func clearServerEnvVars(t *testing.T) {
 	t.Helper()
-	envVars := []string{"PORT", "READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT", "ENVIRONMENT", "VERBOSE"}
+	envVars := []string{"PORT", "READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT", "ENVIRONMENT", "LOG_LEVEL"}
 	for _, v := range envVars {
 		t.Setenv(v, "")
 	}
@@ -28,7 +28,7 @@ func clearServerEnvVars(t *testing.T) {
 // clearOtherServerEnvVars clears all server env vars except PORT
 func clearOtherServerEnvVars(t *testing.T) {
 	t.Helper()
-	envVars := []string{"READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT", "ENVIRONMENT", "VERBOSE"}
+	envVars := []string{"READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT", "ENVIRONMENT", "LOG_LEVEL"}
 	for _, v := range envVars {
 		t.Setenv(v, "")
 	}

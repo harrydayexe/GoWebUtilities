@@ -2,14 +2,14 @@
 //
 // The package simplifies logger setup by automatically configuring the default slog logger
 // based on the application's environment. It selects appropriate log handlers (Text for
-// local development, JSON for test/production) and log levels (DEBUG in verbose mode,
-// INFO otherwise).
+// local development, JSON for test/production) and log levels based on the LOG_LEVEL
+// environment variable.
 //
 // Basic usage:
 //
 //	cfg := config.ServerConfig{
 //		Environment: config.Production,
-//		VerboseMode: false,
+//		LogLevel:    slog.LevelWarn,
 //	}
 //	logging.SetDefaultLogger(cfg)
 //
@@ -20,9 +20,11 @@
 //   - Local: Text handler for human-readable logs during development
 //   - Test/Production: JSON handler for structured log aggregation
 //
-// Verbose mode:
-//   - false: INFO level and above
-//   - true: DEBUG level and above (includes all debug messages)
+// Log level configuration (via LOG_LEVEL environment variable):
+//   - "DEBUG": DEBUG level and above (all messages)
+//   - "INFO": INFO level and above
+//   - "WARN": WARN level and above (default)
+//   - "ERROR": ERROR level only
 //
 // Concurrency:
 //
