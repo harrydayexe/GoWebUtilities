@@ -16,17 +16,17 @@ import (
 // This function handles the complete server lifecycle including:
 //   - Loading configuration from environment variables via NewServerWithConfig
 //   - Starting the HTTP server in a background goroutine
-//   - Listening for interrupt signals (SIGINT) on the provided context
+//   - Listening for SIGINT (Ctrl+C) or context cancellation
 //   - Performing graceful shutdown with a 10-second timeout when interrupted
 //
 // The function blocks until the server is shut down, either by:
-//   - An interrupt signal (Ctrl+C)
+//   - An interrupt signal (SIGINT / Ctrl+C)
 //   - Cancellation of the provided context
 //   - A fatal error during server creation
 //
 // Returns an error only if server creation fails (e.g., invalid configuration).
-// Errors during ListenAndServe or Shutdown are logged to stderr but do not
-// cause the function to return an error, as they may occur during normal shutdown.
+// Errors from ListenAndServe or Shutdown are written to stderr but do not
+// cause the function to return an error, as they can occur during normal shutdown.
 //
 // Example usage:
 //

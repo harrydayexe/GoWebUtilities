@@ -14,13 +14,16 @@ import (
 //
 // The server is configured using config.ServerConfig, which loads settings for:
 //   - Port (env: PORT, default: 8080)
-//   - ReadTimeout (env: READ_TIMEOUT, default: 5 seconds)
-//   - WriteTimeout (env: WRITE_TIMEOUT, default: 10 seconds)
-//   - IdleTimeout (env: IDLE_TIMEOUT, default: 120 seconds)
-//   - Environment (env: ENVIRONMENT, default: Local)
+//   - ReadTimeout (env: READ_TIMEOUT, default: 15 seconds)
+//   - WriteTimeout (env: WRITE_TIMEOUT, default: 15 seconds)
+//   - IdleTimeout (env: IDLE_TIMEOUT, default: 60 seconds)
+//   - Environment (env: ENVIRONMENT, default: "local")
+//
+// As a side effect, NewServerWithConfig calls logging.SetDefaultLogger to configure
+// the global slog logger based on the parsed environment and log level.
 //
 // The function returns an error if the configuration cannot be parsed or validated.
-// Common error cases include invalid port numbers or timeout values.
+// Common error cases include an unrecognised ENVIRONMENT value.
 //
 // The returned server is ready to use with ListenAndServe or Shutdown methods.
 // For automatic lifecycle management with graceful shutdown, use the Run function instead.

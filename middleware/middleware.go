@@ -2,9 +2,9 @@ package middleware
 
 import "net/http"
 
-// middleware is a function that wraps http.Handlers
-// proving functionality before and after execution
-// of the h handler.
+// Middleware is a function that wraps an http.Handler,
+// providing functionality before and after execution
+// of the wrapped handler.
 type Middleware func(h http.Handler) http.Handler
 
 // CreateStack composes multiple middleware into a single middleware.

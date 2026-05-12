@@ -21,7 +21,7 @@
 // The Run function handles all server lifecycle management including:
 //   - Loading configuration from environment variables
 //   - Starting the HTTP server in a goroutine
-//   - Listening for interrupt signals (SIGINT, SIGTERM)
+//   - Listening for interrupt signals (SIGINT / Ctrl+C)
 //   - Performing graceful shutdown with a 10-second timeout
 //
 // For more control over the server instance, use NewServerWithConfig to
