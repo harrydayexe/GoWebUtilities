@@ -822,6 +822,180 @@ func BenchmarkCreateStack_Multiple(b *testing.B) {
 	}
 }
 
+// TestStripHTMLExtension_PathRewriting verifies that .html suffixes are
+// stripped and the next handler receives the rewritten path.
+func TestStripHTMLExtension_PathRewriting(t *testing.T) {
+	tests := []struct {
+		name     string
+		inputPath string
+		wantPath string
+	}{
+		{"no_extension",        "/page",              "/page"},
+		{"root",                "/",                  "/"},
+		{"other_extension",     "/page.json",         "/page.json"},
+		{"html_stripped",       "/page.html",         "/page"},
+		{"nested_html",        "/about/page.html",    "/about/page"},
+		{"index_html_root",    "/index.html",         "/"},
+		{"nested_index_html",  "/about/index.html",   "/about/"},
+		{"deep_index_html",    "/a/b/index.html",     "/a/b/"},
+		{"dot_html_only",      "/.html",              "/"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotPath string
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotPath = r.URL.Path
+				w.WriteHeader(http.StatusOK)
+			})
+
+			mw := NewStripHTMLExtension()
+			req := httptest.NewRequest("GET", tt.inputPath, nil)
+			w := httptest.NewRecorder()
+
+			mw(handler).ServeHTTP(w, req)
+
+			if gotPath != tt.wantPath {
+				t.Errorf("path: got %q, want %q", gotPath, tt.wantPath)
+			}
+			assertStatus(t, w, http.StatusOK)
+		})
+	}
+}
+
+// TestStripHTMLExtension_RawPathKeptInSync verifies that when a URL contains
+// percent-encoded characters that cause Go to set RawPath, both Path and
+// RawPath are updated consistently after stripping the .html suffix.
+//
+// The critical case is %2F (an encoded slash): Go sets RawPath to preserve the
+// single-segment semantics that would be lost if the path were decoded. Without
+// updating RawPath, EscapedPath() would re-encode the decoded Path, collapsing
+// /foo%2Fbar into /foo/bar (two segments instead of one).
+//
+// Note: %20 (encoded space) does NOT trigger RawPath because Go stores the
+// decoded space in Path and EscapedPath() re-encodes it correctly without help.
+func TestStripHTMLExtension_RawPathKeptInSync(t *testing.T) {
+	tests := []struct {
+		name            string
+		inputPath       string
+		wantPath        string
+		wantRawPath     string
+		wantEscapedPath string
+	}{
+		{
+			// %2F is an encoded slash — Go sets RawPath to preserve the fact that
+			// this is one path segment, not two. Without syncing RawPath, the
+			// rewrite would silently change /foo%2Fbar → /foo/bar (two segments).
+			name:            "encoded_slash_preserves_segment",
+			inputPath:       "/foo%2Fbar.html",
+			wantPath:        "/foo/bar",
+			wantRawPath:     "/foo%2Fbar",
+			wantEscapedPath: "/foo%2Fbar",
+		},
+		{
+			// %20 (space) — Go normalises this into Path directly; RawPath is not
+			// set. EscapedPath() re-encodes the space in Path correctly on its own.
+			name:            "encoded_space_no_rawpath",
+			inputPath:       "/my%20page.html",
+			wantPath:        "/my page",
+			wantRawPath:     "",
+			wantEscapedPath: "/my%20page",
+		},
+		{
+			name:            "plain_path_no_rawpath",
+			inputPath:       "/about/index.html",
+			wantPath:        "/about/",
+			wantRawPath:     "",
+			wantEscapedPath: "/about/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotPath, gotRawPath, gotEscaped string
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotPath = r.URL.Path
+				gotRawPath = r.URL.RawPath
+				gotEscaped = r.URL.EscapedPath()
+				w.WriteHeader(http.StatusOK)
+			})
+
+			mw := NewStripHTMLExtension()
+			req := httptest.NewRequest("GET", tt.inputPath, nil)
+			w := httptest.NewRecorder()
+
+			mw(handler).ServeHTTP(w, req)
+
+			if gotPath != tt.wantPath {
+				t.Errorf("Path: got %q, want %q", gotPath, tt.wantPath)
+			}
+			if gotRawPath != tt.wantRawPath {
+				t.Errorf("RawPath: got %q, want %q", gotRawPath, tt.wantRawPath)
+			}
+			if gotEscaped != tt.wantEscapedPath {
+				t.Errorf("EscapedPath(): got %q, want %q", gotEscaped, tt.wantEscapedPath)
+			}
+		})
+	}
+}
+
+// TestStripHTMLExtension_QueryStringPreserved verifies that query parameters
+// are not affected by the path rewriting.
+func TestStripHTMLExtension_QueryStringPreserved(t *testing.T) {
+	var gotQuery string
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+	})
+
+	mw := NewStripHTMLExtension()
+	req := httptest.NewRequest("GET", "/page.html?foo=bar&baz=1", nil)
+	w := httptest.NewRecorder()
+
+	mw(handler).ServeHTTP(w, req)
+
+	if gotQuery != "foo=bar&baz=1" {
+		t.Errorf("query: got %q, want %q", gotQuery, "foo=bar&baz=1")
+	}
+}
+
+// TestStripHTMLExtension_NonHTMLUnchanged verifies that paths without a .html
+// suffix pass through to the next handler completely unchanged.
+func TestStripHTMLExtension_NonHTMLUnchanged(t *testing.T) {
+	paths := []string{"/", "/about", "/api/users", "/style.css", "/data.json", "/file.htm"}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			var gotPath string
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotPath = r.URL.Path
+				w.WriteHeader(http.StatusOK)
+			})
+
+			mw := NewStripHTMLExtension()
+			req := httptest.NewRequest("GET", path, nil)
+			w := httptest.NewRecorder()
+
+			mw(handler).ServeHTTP(w, req)
+
+			if gotPath != path {
+				t.Errorf("path %q: got %q, want unchanged", path, gotPath)
+			}
+		})
+	}
+}
+
+// TestConcurrentRequests_StripHTMLExtension verifies the middleware is safe
+// for concurrent use.
+func TestConcurrentRequests_StripHTMLExtension(t *testing.T) {
+	mw := NewStripHTMLExtension()
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	runConcurrent(t, mw(handler), 100)
+}
+
 // BenchmarkCreateStack_Execution measures just the execution overhead.
 func BenchmarkCreateStack_Execution(b *testing.B) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
