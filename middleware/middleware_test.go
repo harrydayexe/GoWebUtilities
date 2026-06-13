@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // Test helper functions
@@ -826,19 +827,19 @@ func BenchmarkCreateStack_Multiple(b *testing.B) {
 // stripped and the next handler receives the rewritten path.
 func TestStripHTMLExtension_PathRewriting(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		inputPath string
-		wantPath string
+		wantPath  string
 	}{
-		{"no_extension",        "/page",              "/page"},
-		{"root",                "/",                  "/"},
-		{"other_extension",     "/page.json",         "/page.json"},
-		{"html_stripped",       "/page.html",         "/page"},
-		{"nested_html",        "/about/page.html",    "/about/page"},
-		{"index_html_root",    "/index.html",         "/"},
-		{"nested_index_html",  "/about/index.html",   "/about/"},
-		{"deep_index_html",    "/a/b/index.html",     "/a/b/"},
-		{"dot_html_only",      "/.html",              "/"},
+		{"no_extension", "/page", "/page"},
+		{"root", "/", "/"},
+		{"other_extension", "/page.json", "/page.json"},
+		{"html_stripped", "/page.html", "/page"},
+		{"nested_html", "/about/page.html", "/about/page"},
+		{"index_html_root", "/index.html", "/"},
+		{"nested_index_html", "/about/index.html", "/about/"},
+		{"deep_index_html", "/a/b/index.html", "/a/b/"},
+		{"dot_html_only", "/.html", "/"},
 	}
 
 	for _, tt := range tests {
@@ -1015,5 +1016,40 @@ func BenchmarkCreateStack_Execution(b *testing.B) {
 	for b.Loop() {
 		w := httptest.NewRecorder()
 		wrapped.ServeHTTP(w, req)
+	}
+}
+
+func Test_CacheControlMiddleware(t *testing.T) {
+	tests := []struct {
+		name           string
+		ttl            time.Duration
+		expectedHeader string
+	}{
+		{
+			name:           "1 hour ttl",
+			ttl:            time.Hour,
+			expectedHeader: "public, max-age=3600",
+		},
+		{
+			name:           "6 hour ttl",
+			ttl:            6 * time.Hour,
+			expectedHeader: "public, max-age=21600",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})
+
+			mw := CacheControlMiddleware(tt.ttl)
+			req := httptest.NewRequest("GET", "/", nil)
+			w := httptest.NewRecorder()
+
+			mw(handler).ServeHTTP(w, req)
+
+			assertHeader(t, w, "Cache-Control", tt.expectedHeader)
+		})
 	}
 }
