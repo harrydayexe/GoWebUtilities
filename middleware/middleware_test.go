@@ -1043,7 +1043,7 @@ func Test_CacheControlMiddleware(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			mw := CacheControlMiddleware(tt.ttl)
+			mw := NewCacheControl(tt.ttl)
 			req := httptest.NewRequest("GET", "/", nil)
 			w := httptest.NewRecorder()
 
