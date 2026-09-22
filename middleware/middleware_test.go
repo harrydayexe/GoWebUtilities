@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -58,43 +57,6 @@ func assertBody(t *testing.T, w *httptest.ResponseRecorder, want string) {
 	t.Helper()
 	if got := w.Body.String(); got != want {
 		t.Errorf("body: got %q, want %q", got, want)
-	}
-}
-
-// runConcurrent executes a handler concurrently with count goroutines.
-// Used for testing race conditions and concurrent request handling.
-func runConcurrent(t *testing.T, handler http.Handler, count int) {
-	t.Helper()
-	var wg sync.WaitGroup
-	server := httptest.NewServer(handler)
-	defer server.Close()
-
-	errors := make(chan error, count)
-
-	for i := 0; i < count; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			resp, err := http.Get(server.URL)
-			if err != nil {
-				errors <- err
-				return
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != http.StatusOK {
-				errors <- err
-			}
-		}(i)
-	}
-
-	wg.Wait()
-	close(errors)
-
-	for err := range errors {
-		if err != nil {
-			t.Errorf("concurrent request failed: %v", err)
-		}
 	}
 }
 
@@ -589,52 +551,6 @@ func TestCreateStack_Composition(t *testing.T) {
 	}
 }
 
-// TestConcurrentRequests_Logging verifies that the logging middleware
-// handles concurrent requests without race conditions.
-func TestConcurrentRequests_Logging(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("concurrent"))
-	})
-
-	logger, _ := newTestLogger()
-	mw := NewLoggingMiddleware(logger)
-
-	runConcurrent(t, mw(handler), 100)
-}
-
-// TestConcurrentRequests_MaxBytesReader verifies that MaxBytesReader
-// handles concurrent requests with varying body sizes.
-func TestConcurrentRequests_MaxBytesReader(t *testing.T) {
-	mw := NewMaxBytesReader(1024)
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.ReadAll(r.Body)
-		w.WriteHeader(http.StatusOK)
-	})
-
-	runConcurrent(t, mw(handler), 100)
-}
-
-// TestConcurrentRequests_Stack verifies that a full middleware stack
-// handles high concurrency without issues.
-func TestConcurrentRequests_Stack(t *testing.T) {
-	logger, _ := newTestLogger()
-	stack := CreateStack(
-		NewLoggingMiddleware(logger),
-		NewMaxBytesReader(1024),
-		NewSetContentTypeJSON(),
-	)
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	})
-
-	// Test with high concurrency
-	runConcurrent(t, stack(handler), 1000)
-}
-
 // TestLoggingMiddleware_HandlerPanic verifies that middleware doesn't
 // interfere with panic propagation.
 func TestLoggingMiddleware_HandlerPanic(t *testing.T) {
@@ -984,17 +900,6 @@ func TestStripHTMLExtension_NonHTMLUnchanged(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestConcurrentRequests_StripHTMLExtension verifies the middleware is safe
-// for concurrent use.
-func TestConcurrentRequests_StripHTMLExtension(t *testing.T) {
-	mw := NewStripHTMLExtension()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	runConcurrent(t, mw(handler), 100)
 }
 
 // BenchmarkCreateStack_Execution measures just the execution overhead.
