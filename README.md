@@ -29,6 +29,7 @@ Available middleware:
 - **NewMaxBytesReader** — limits request body size to prevent resource exhaustion (defaults to 1 MB when 0 is passed).
 - **NewSetContentType / NewSetContentTypeJSON** — sets the `Content-Type` response header for all responses.
 - **NewStripHTMLExtension** — rewrites `.html` paths to clean URLs before routing (e.g. `/about.html` becomes `/about`; `/index.html` becomes `/`).
+- **NewRedirectWWW**: redirects calls to "www." subdomain to the root domain.
 
 Use `CreateStack` to compose multiple middleware in order. The first argument is outermost and executes first on every request:
 
