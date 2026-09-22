@@ -15,11 +15,13 @@
 //   - NewMaxBytesReader: limits request body size to prevent resource exhaustion.
 //   - NewSetContentType / NewSetContentTypeJSON: sets the Content-Type response header.
 //   - NewStripHTMLExtension: rewrites ".html" paths to clean URLs before routing.
+//   - NewRedirectWWW: redirects calls to "www." subdomain to the root domain.
 //
 // Example — composing a middleware stack for a JSON API:
 //
 //	stack := middleware.CreateStack(
 //	    middleware.NewLoggingMiddleware(logger),
+//	    middleware.NewRedirectWWW(),
 //	    middleware.NewMaxBytesReader(1024*1024), // 1 MB
 //	    middleware.NewSetContentTypeJSON(),
 //	)
