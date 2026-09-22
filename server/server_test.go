@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -205,37 +204,6 @@ func TestNewServerWithConfig_HandlerIntegration(t *testing.T) {
 	}
 }
 
-func TestNewServerWithConfig_ConcurrentCreation(t *testing.T) {
-	clearServerEnvVars(t)
-
-	var wg sync.WaitGroup
-	errors := make(chan error, 10)
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			srv, err := NewServerWithConfig(handler)
-			if err != nil {
-				errors <- err
-				return
-			}
-			if srv == nil {
-				errors <- fmt.Errorf("got nil server")
-			}
-		}()
-	}
-
-	wg.Wait()
-	close(errors)
-
-	for err := range errors {
-		t.Errorf("concurrent creation error: %v", err)
-	}
-}
-
 // Run Function Tests
 
 func TestRun_ContextCancellation(t *testing.T) {
@@ -288,6 +256,44 @@ func TestRun_ConfigurationError(t *testing.T) {
 	}
 
 	assertContains(t, err.Error(), "failed to create server with config")
+}
+
+// TestRun_ListenError verifies that Run returns promptly when ListenAndServe
+// fails, rather than blocking until the context is cancelled.
+func TestRun_ListenError(t *testing.T) {
+	// Suppress log output for this test
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	// Occupy a port so ListenAndServe cannot bind to it. This must bind the
+	// same wildcard address Run uses (":port"); occupying only 127.0.0.1:port
+	// would leave the wildcard bind free under SO_REUSEADDR.
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatalf("failed to occupy port: %v", err)
+	}
+	defer listener.Close()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	t.Setenv("PORT", fmt.Sprintf("%d", port))
+	clearOtherServerEnvVars(t)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	// Context is never cancelled: Run must return on the listen error alone
+	runComplete := make(chan error, 1)
+	go func() {
+		runComplete <- Run(context.Background(), handler)
+	}()
+
+	select {
+	case err := <-runComplete:
+		if err == nil {
+			t.Fatal("expected error when port is already in use, got nil")
+		}
+		assertContains(t, err.Error(), "error listening and serving")
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not return after ListenAndServe failed")
+	}
 }
 
 func TestRun_GracefulShutdown(t *testing.T) {

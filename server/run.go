@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 )
 
@@ -23,10 +22,12 @@ import (
 //   - An interrupt signal (SIGINT / Ctrl+C)
 //   - Cancellation of the provided context
 //   - A fatal error during server creation
+//   - A failure to listen and serve (e.g., the port is already in use)
 //
-// Returns an error only if server creation fails (e.g., invalid configuration).
-// Errors from ListenAndServe or Shutdown are written to stderr but do not
-// cause the function to return an error, as they can occur during normal shutdown.
+// Returns an error if server creation fails (e.g., invalid configuration) or if
+// ListenAndServe fails for any reason other than a normal shutdown. Errors from
+// Shutdown are written to stderr but do not cause the function to return an
+// error, as they can occur during normal shutdown.
 //
 // Example usage:
 //
@@ -53,28 +54,28 @@ func Run(
 		return fmt.Errorf("failed to create server with config from environment: %w", err)
 	}
 
+	// Buffered so the goroutine never blocks if we return via ctx.Done first.
+	listenErr := make(chan error, 1)
 	go func() {
 		logger.Info(
 			"server listening",
 			slog.String("address", httpServer.Addr),
 		)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
+			listenErr <- err
 		}
 	}()
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		// wait for ctx cancellation
-		<-ctx.Done()
+
+	select {
+	case err := <-listenErr:
+		return fmt.Errorf("error listening and serving: %w", err)
+	case <-ctx.Done():
 		// make a new context for the Shutdown
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			fmt.Fprintf(os.Stderr, "error shutting down http server: %s\n", err)
 		}
-	}()
-	wg.Wait()
+	}
 	return nil
 }
